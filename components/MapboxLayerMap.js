@@ -28,7 +28,7 @@ const MAPS = [
 	},
 ]
 const SCAN_FOLLOW_ZOOM = 15
-const SCAN_FOLLOW_SCREEN_OFFSET = [300, 0]
+const SCAN_FOLLOW_SCREEN_OFFSET = [0, 0]
 export default function MapboxLayerMap() {
 	const containerRefs = useRef({})
 	const baseContainerRefs = useRef({})
@@ -37,6 +37,8 @@ export default function MapboxLayerMap() {
 	const coastRouteRef = useRef([])
 	const coastScrubberRef = useRef(null)
 	const draggingCoastRef = useRef(false)
+	const draggingPointRef = useRef(false)
+	const userOffsetXRef = useRef(0)
 	const scanStartedRef = useRef(false)
 	const scanFollowingRef = useRef(false)
 	const lastScanFollowAtRef = useRef(0)
@@ -47,7 +49,9 @@ export default function MapboxLayerMap() {
 	const [loadedMaps, setLoadedMaps] = useState({})
 	const [error, setError] = useState('')
 	const [activePanel, setActivePanel] = useState('layers')
+	const [focus3D, setFocus3D] = useState(null)
 	const [coastPosition, setCoastPosition] = useState(0)
+	const [coastPositionX, setCoastPositionX] = useState(50)
 	const [visibleLayers, setVisibleLayers] = useState(() => {
 		return Object.fromEntries(
 			Object.entries(mapLayers)
@@ -151,6 +155,15 @@ export default function MapboxLayerMap() {
 				syncLinkedMaps(mapConfig.id)
 			})
 
+			map.on('click', event => {
+				if (mapConfig.id === 'regional') {
+					setFocus3D({
+						longitude: event.lngLat.lng,
+						latitude: event.lngLat.lat,
+					})
+				}
+			})
+
 			map.on('contextmenu', event => {
 				event.preventDefault()
 				copyMapView(mapConfig.id)
@@ -234,11 +247,23 @@ export default function MapboxLayerMap() {
 		syncingRef.current = false
 	}
 
-	function handleCoastScrubStart(event) {
+	function handleBarScrubStart(event) {
 		event.preventDefault()
 		event.stopPropagation()
 		scanStartedRef.current = true
 		draggingCoastRef.current = true
+		draggingPointRef.current = false
+		userOffsetXRef.current = 0
+		event.currentTarget.setPointerCapture(event.pointerId)
+		updateCoastFromPointer(event)
+	}
+
+	function handlePointScrubStart(event) {
+		event.preventDefault()
+		event.stopPropagation()
+		scanStartedRef.current = true
+		draggingCoastRef.current = true
+		draggingPointRef.current = true
 		event.currentTarget.setPointerCapture(event.pointerId)
 		updateCoastFromPointer(event)
 	}
@@ -254,28 +279,53 @@ export default function MapboxLayerMap() {
 		event?.preventDefault()
 		event?.stopPropagation()
 		draggingCoastRef.current = false
+		draggingPointRef.current = false
 	}
 
 	function updateCoastFromPointer(event) {
 		const scrubber = coastScrubberRef.current
-		if (!scrubber) return
+		const overviewMap = mapsRef.current.overview
+		if (!scrubber || !overviewMap) return
 
-		const rect = scrubber.getBoundingClientRect()
-		const value = clamp(((event.clientY - rect.top) / rect.height) * 100, 0, 100)
-		setCoastPosition(value)
-		updateCoastFocus(value)
+		const scrubberRect = scrubber.getBoundingClientRect()
+		const mapContainer = overviewMap.getContainer()
+		const mapRect = mapContainer.getBoundingClientRect()
+		
+		const valueY = clamp(((event.clientY - scrubberRect.top) / scrubberRect.height) * 100, 0, 100)
+		setCoastPosition(valueY)
+
+		const route = coastRouteRef.current
+		let coastCoordinate
+		if (route.length >= 2) {
+			coastCoordinate = interpolateRoute(route, valueY / 100).coordinate
+		} else {
+			coastCoordinate = overviewMap.getCenter().toArray()
+		}
+
+		const coastPixelX = overviewMap.project(coastCoordinate).x
+
+		if (draggingPointRef.current) {
+			const mousePixelX = event.clientX - mapRect.left
+			userOffsetXRef.current = mousePixelX - coastPixelX
+		}
+
+		const finalPixelX = coastPixelX + userOffsetXRef.current
+		const finalPixelY = scrubberRect.top - mapRect.top + (valueY / 100) * scrubberRect.height
+
+		const focusCoordinate = overviewMap.unproject([finalPixelX, finalPixelY]).toArray()
+
+		const valueX = clamp(((finalPixelX - (scrubberRect.left - mapRect.left)) / scrubberRect.width) * 100, 0, 100)
+		setCoastPositionX(valueX)
+
+		updateCoastFocusWithCoordinate(focusCoordinate)
 	}
 
-	function updateCoastFocus(value, options = {}) {
-		const route = coastRouteRef.current
-		if (route.length < 2) return
-
-		const focus = interpolateRoute(route, value / 100)
-
+	function updateCoastFocusWithCoordinate(focusCoordinate) {
 		const regionalMap = mapsRef.current.regional
 		const overviewMap = mapsRef.current.overview
-		if (!regionalMap) return
-		const center = getOffsetCenter(regionalMap, focus.coordinate, SCAN_FOLLOW_SCREEN_OFFSET)
+		if (!regionalMap || !overviewMap) return
+
+		const center = getOffsetCenter(regionalMap, focusCoordinate, SCAN_FOLLOW_SCREEN_OFFSET)
 		const overviewCamera = overviewMap ? getMapCamera(overviewMap) : null
 
 		lastScanFollowAtRef.current = Date.now()
@@ -405,6 +455,38 @@ export default function MapboxLayerMap() {
 			[layerId]: !current[layerId],
 		}))
 	}
+	function handleSearchLocation(coord) {
+		const overviewMap = mapsRef.current.overview
+		const scrubber = coastScrubberRef.current
+		if (!overviewMap || !scrubber) return
+
+		const mapContainer = overviewMap.getContainer()
+		const mapRect = mapContainer.getBoundingClientRect()
+		const scrubberRect = scrubber.getBoundingClientRect()
+
+		const pixel = overviewMap.project(coord)
+
+		const pixelYRelativeToScrubber = pixel.y + mapRect.top - scrubberRect.top
+		const valueY = clamp((pixelYRelativeToScrubber / scrubberRect.height) * 100, 0, 100)
+		setCoastPosition(valueY)
+
+		const route = coastRouteRef.current
+		let coastCoordinate
+		if (route.length >= 2) {
+			coastCoordinate = interpolateRoute(route, valueY / 100).coordinate
+		} else {
+			coastCoordinate = overviewMap.getCenter().toArray()
+		}
+		const coastPixelX = overviewMap.project(coastCoordinate).x
+
+		userOffsetXRef.current = pixel.x - coastPixelX
+
+		const finalPixelX = coastPixelX + userOffsetXRef.current
+		const valueX = clamp(((finalPixelX - (scrubberRect.left - mapRect.left)) / scrubberRect.width) * 100, 0, 100)
+		setCoastPositionX(valueX)
+
+		updateCoastFocusWithCoordinate(coord)
+	}
 
 	function copyMapView(mapId) {
 		const map = mapsRef.current[mapId]
@@ -442,24 +524,32 @@ export default function MapboxLayerMap() {
 				{MAPS.map(mapConfig => (
 					<div key={mapConfig.id} className="map-column">
 						{mapConfig.id === 'overview' && (
-							<div
-								ref={coastScrubberRef}
+							<>
+								<SearchBar onLocationSelect={handleSearchLocation} />
+								<div
+									ref={coastScrubberRef}
 								className="coast-scrubber"
 								role="slider"
 								aria-label="Move along Spain coastline"
 								aria-valuemin={0}
 								aria-valuemax={100}
 								aria-valuenow={roundNumber(coastPosition)}
-								onPointerDown={handleCoastScrubStart}
+								onPointerDown={handleBarScrubStart}
 								onPointerMove={handleCoastScrubMove}
 								onPointerUp={handleCoastScrubEnd}
 								onPointerCancel={handleCoastScrubEnd}
 							>
 								<div
 									className="coast-scrubber-line"
-									style={{ top: `${coastPosition}%` }}
-								/>
+									style={{ top: `${coastPosition}%`, '--scrubber-x': `${coastPositionX}%` }}
+								>
+									<div
+										className="coast-scrubber-point"
+										onPointerDown={handlePointScrubStart}
+									/>
+								</div>
 							</div>
+							</>
 						)}
 						<div
 							ref={element => {
@@ -477,7 +567,7 @@ export default function MapboxLayerMap() {
 				))}
 
 				<div className="map-column">
-					<GooglePhotorealistic3D />
+					<GooglePhotorealistic3D focus={focus3D} />
 				</div>
 
 				<aside className="layers-column">
@@ -715,6 +805,63 @@ function roundCoordinate(value) {
 	return Number(value.toFixed(6))
 }
 
-function roundNumber(value) {
-	return Number(value.toFixed(3))
+function roundNumber(num) {
+	return Math.round(num * 1000) / 1000
+}
+
+function SearchBar({ onLocationSelect }) {
+	const inputRef = useRef(null)
+	const autocompleteRef = useRef(null)
+
+	useEffect(() => {
+		if (!inputRef.current) return
+
+		let interval = setInterval(() => {
+			if (window.google && window.google.maps && window.google.maps.places) {
+				clearInterval(interval)
+				autocompleteRef.current = new window.google.maps.places.Autocomplete(inputRef.current, {
+					fields: ['geometry', 'name'],
+				})
+
+				autocompleteRef.current.addListener('place_changed', () => {
+					const place = autocompleteRef.current.getPlace()
+					if (place.geometry && place.geometry.location) {
+						onLocationSelect([place.geometry.location.lng(), place.geometry.location.lat()])
+					}
+				})
+			}
+		}, 100)
+
+		return () => clearInterval(interval)
+	}, [onLocationSelect])
+
+	const handleKeyDown = (e) => {
+		if (e.key === 'Enter') {
+			e.preventDefault()
+			const query = inputRef.current.value
+			if (!query) return
+
+			if (window.google && window.google.maps && window.google.maps.Geocoder) {
+				const geocoder = new window.google.maps.Geocoder()
+				geocoder.geocode({ address: query }, (results, status) => {
+					if (status === 'OK' && results[0]) {
+						const loc = results[0].geometry.location
+						onLocationSelect([loc.lng(), loc.lat()])
+					}
+				})
+			}
+		}
+	}
+
+	return (
+		<div className="search-bar-container">
+			<input 
+				ref={inputRef}
+				type="text" 
+				placeholder="Search places or coordinates..." 
+				className="search-bar-input"
+				onKeyDown={handleKeyDown}
+			/>
+		</div>
+	)
 }

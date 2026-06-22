@@ -347,26 +347,28 @@ code {
 	bottom: -0.55rem;
 }
 
-.coast-scrubber-line::after {
-	content: "";
+.coast-scrubber-point {
 	position: absolute;
-	left: 50%;
+	left: var(--scrubber-x, 50%);
 	top: 50%;
-	width: 0.6rem;
-	height: 0.6rem;
+	width: 0.9rem;
+	height: 0.9rem;
 	transform: translate(-50%, -50%);
 	border: 1px solid #0015ff;
 	border-radius: 50%;
 	background: #fff;
+	cursor: ew-resize;
+	pointer-events: auto;
+	touch-action: none;
 }
 
 .coast-scrubber-line:active {
 	height: 3px;
 }
 
-.coast-scrubber-line:active::after {
-	width: 0.75rem;
-	height: 0.75rem;
+.coast-scrubber-point:active {
+	width: 1.05rem;
+	height: 1.05rem;
 }
 
 .coast-scrubber-line:focus-visible {
@@ -392,7 +394,7 @@ code {
 	overscroll-behavior: contain;
 }
 
-.coast-scrubber-line::after {
+.coast-scrubber-point {
 	transition: width 120ms ease, height 120ms ease;
 }
 
@@ -497,4 +499,71 @@ code {
 		min-height: auto;
 		border-left: 0;
 	}
+}
+
+.view-mode-toggle {
+	position: absolute;
+	top: 1rem;
+	left: 1rem;
+	z-index: 10;
+	display: flex;
+	gap: 0;
+	background: #fff;
+	border: 1px solid #111;
+	border-radius: 4px;
+	overflow: hidden;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.view-mode-toggle button {
+	border: none;
+	background: transparent;
+	padding: 0.5rem 0.9rem;
+	font-size: 0.85rem;
+	font-weight: 500;
+	color: #111;
+	cursor: pointer;
+	transition: background 150ms ease, color 150ms ease;
+}
+
+.view-mode-toggle button.active {
+	background: #0015ff;
+	color: #fff;
+}
+
+.view-mode-toggle button:not(.active):hover {
+	background: #f0f0f0;
+}
+
+.search-bar-container {
+	position: absolute;
+	top: 1rem;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 10;
+	width: calc(100% - 4rem);
+	max-width: 400px;
+}
+
+.search-bar-input {
+	width: 100%;
+	padding: 0.8rem 1.2rem;
+	font-size: 0.95rem;
+	font-family: inherit;
+	border: 1px solid #111;
+	border-radius: 2rem;
+	background: rgba(255, 255, 255, 0.95);
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+	outline: none;
+	color: #111;
+	transition: background 200ms ease;
+}
+
+.search-bar-input:focus {
+	background: #fff;
+	box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+}
+
+.search-bar-input::placeholder {
+	color: #666;
 }

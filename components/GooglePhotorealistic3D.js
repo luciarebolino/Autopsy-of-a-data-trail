@@ -14,21 +14,111 @@ const INITIAL_VIEW = {
 	roll: 0.033,
 }
 
-export default function GooglePhotorealistic3D() {
+export default function GooglePhotorealistic3D({ focus }) {
 	const containerRef = useRef(null)
+	const streetViewRef = useRef(null)
 	const viewerRef = useRef(null)
+	const panoramaRef = useRef(null)
+	const elevationServiceRef = useRef(null)
+	
 	const [error, setError] = useState('')
+	const [viewMode, setViewMode] = useState('3d') // '3d' or 'streetview'
 	const apiKey = cleanToken(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY)
 
+	// Focus effect: Fly to or update Street View
 	useEffect(() => {
-		if (!containerRef.current || viewerRef.current) return
+		if (!focus) return
 
+		if (viewMode === '3d' && viewerRef.current && window.Cesium) {
+			const Cesium = window.Cesium
+			const viewer = viewerRef.current
+
+			if (elevationServiceRef.current) {
+				elevationServiceRef.current.getElevationForLocations(
+					{ locations: [{ lat: focus.latitude, lng: focus.longitude }] },
+					(results, status) => {
+						let targetHeight = INITIAL_VIEW.height
+						if (status === 'OK' && results[0]) {
+							targetHeight = results[0].elevation + 150 // 150m above ground
+						}
+
+						viewer.camera.flyTo({
+							destination: Cesium.Cartesian3.fromDegrees(
+								focus.longitude,
+								focus.latitude,
+								targetHeight
+							),
+							orientation: {
+								heading: Cesium.Math.toRadians(INITIAL_VIEW.heading),
+								pitch: Cesium.Math.toRadians(INITIAL_VIEW.pitch),
+								roll: Cesium.Math.toRadians(INITIAL_VIEW.roll),
+							},
+							duration: 1.5,
+						})
+					}
+				)
+			} else {
+				viewer.camera.flyTo({
+					destination: Cesium.Cartesian3.fromDegrees(
+						focus.longitude,
+						focus.latitude,
+						INITIAL_VIEW.height + 200 // Fallback safe offset
+					),
+					orientation: {
+						heading: Cesium.Math.toRadians(INITIAL_VIEW.heading),
+						pitch: Cesium.Math.toRadians(INITIAL_VIEW.pitch),
+						roll: Cesium.Math.toRadians(INITIAL_VIEW.roll),
+					},
+					duration: 1.5,
+				})
+			}
+		} else if (viewMode === 'streetview' && panoramaRef.current && window.google) {
+			const svService = new window.google.maps.StreetViewService()
+			const location = { lat: focus.latitude, lng: focus.longitude }
+			
+			svService.getPanorama(
+				{ 
+					location, 
+					radius: 2000,
+					preference: window.google.maps.StreetViewPreference.NEAREST 
+				}, 
+				(data, status) => {
+				if (status === 'OK' && data.location) {
+					panoramaRef.current.setPano(data.location.pano)
+				} else {
+					panoramaRef.current.setPosition(location)
+				}
+			})
+		}
+	}, [focus, viewMode])
+
+	// Initialization effect
+	useEffect(() => {
 		if (!apiKey) {
 			setError('Add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to .env.local to load Google Photorealistic 3D.')
 			return
 		}
 
 		let cancelled = false
+
+		loadGoogleMaps(apiKey)
+			.then(() => {
+				if (cancelled || !window.google) return
+				elevationServiceRef.current = new window.google.maps.ElevationService()
+
+				if (streetViewRef.current && !panoramaRef.current) {
+					panoramaRef.current = new window.google.maps.StreetViewPanorama(streetViewRef.current, {
+						position: { lat: INITIAL_VIEW.latitude, lng: INITIAL_VIEW.longitude },
+						pov: { heading: INITIAL_VIEW.heading, pitch: 0 },
+						zoom: 1,
+						disableDefaultUI: true,
+						showRoadLabels: false,
+					})
+				}
+			})
+			.catch(err => console.warn('Failed to load Google Maps JS API', err))
+
+		if (!containerRef.current || viewerRef.current) return
 
 		loadCesium()
 			.then(() => {
@@ -93,11 +183,49 @@ export default function GooglePhotorealistic3D() {
 	}, [apiKey])
 
 	return (
-		<div className="google-3d-panel">
-			<div ref={containerRef} className="google-3d-container" />
+		<div className="google-3d-panel" style={{ position: 'relative', width: '100%', height: '100%' }}>
+			<div className="view-mode-toggle">
+				<button 
+					type="button"
+					className={viewMode === '3d' ? 'active' : ''} 
+					onClick={() => setViewMode('3d')}
+				>
+					3D View
+				</button>
+				<button 
+					type="button"
+					className={viewMode === 'streetview' ? 'active' : ''} 
+					onClick={() => setViewMode('streetview')}
+				>
+					Street View
+				</button>
+			</div>
+
+			<div 
+				ref={containerRef} 
+				className="google-3d-container" 
+				style={{ opacity: viewMode === '3d' ? 1 : 0, pointerEvents: viewMode === '3d' ? 'auto' : 'none' }} 
+			/>
+			
+			<div 
+				ref={streetViewRef} 
+				className="street-view-container" 
+				style={{ 
+					position: 'absolute', 
+					inset: 0, 
+					opacity: viewMode === 'streetview' ? 1 : 0, 
+					pointerEvents: viewMode === 'streetview' ? 'auto' : 'none',
+					zIndex: viewMode === 'streetview' ? 1 : -1
+				}} 
+			/>
+			
 			{error && <div className="map-message">{error}</div>}
 		</div>
 	)
+}
+
+function loadGoogleMaps(apiKey) {
+	return loadScript(`https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=elevation,places`)
 }
 
 function loadCesium() {
@@ -111,10 +239,19 @@ function loadCesium() {
 
 function loadScript(src) {
 	return new Promise((resolve, reject) => {
-		const existing = document.querySelector(`script[src="${src}"]`)
+		if (src.includes('maps.googleapis.com') && window.google && window.google.maps) {
+			resolve()
+			return
+		}
+		if (src.includes('cesiumjs') && window.Cesium) {
+			resolve()
+			return
+		}
+
+		const srcBase = src.split('?')[0]
+		const existing = document.querySelector(`script[src^="${srcBase}"]`)
 		if (existing) {
 			existing.addEventListener('load', resolve, { once: true })
-			if (window.Cesium) resolve()
 			return
 		}
 
