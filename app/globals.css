@@ -503,8 +503,9 @@ code {
 
 .view-mode-toggle {
 	position: absolute;
-	top: 1rem;
-	left: 1rem;
+	top: calc(var(--header-height) + 0.75rem);
+	right: 0.75rem;
+	left: auto;
 	z-index: 10;
 	display: flex;
 	gap: 0;
@@ -537,12 +538,13 @@ code {
 
 .search-bar-container {
 	position: absolute;
-	top: 1rem;
-	left: 50%;
-	transform: translateX(-50%);
+	top: calc(var(--header-height) + 0.75rem + 2.4rem + 0.5rem);
+	right: 0.75rem;
+	left: auto;
+	transform: none;
 	z-index: 10;
-	width: calc(100% - 4rem);
-	max-width: 400px;
+	width: calc(100% - 1.5rem);
+	max-width: 280px;
 }
 
 .search-bar-input {
@@ -566,4 +568,39 @@ code {
 
 .search-bar-input::placeholder {
 	color: #666;
+}
+
+/* Regional map crosshair */
+.regional-crosshair {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 2rem;
+	height: 2rem;
+	z-index: 10;
+	cursor: pointer;
+	pointer-events: auto;
+}
+.regional-crosshair::before,
+.regional-crosshair::after {
+	content: "";
+	position: absolute;
+	background: #0015ff;
+}
+/* vertical bar */
+.regional-crosshair::before {
+	width: 1px;
+	height: 100%;
+	left: 50%;
+	top: 0;
+	transform: translateX(-50%);
+}
+/* horizontal bar */
+.regional-crosshair::after {
+	height: 1px;
+	width: 100%;
+	top: 50%;
+	left: 0;
+	transform: translateY(-50%);
 }

@@ -50,6 +50,7 @@ export default function MapboxLayerMap() {
 	const [error, setError] = useState('')
 	const [activePanel, setActivePanel] = useState('layers')
 	const [focus3D, setFocus3D] = useState(null)
+	const [focusCoord, setFocusCoord] = useState(null)
 	const [coastPosition, setCoastPosition] = useState(0)
 	const [coastPositionX, setCoastPositionX] = useState(50)
 	const [visibleLayers, setVisibleLayers] = useState(() => {
@@ -325,6 +326,8 @@ export default function MapboxLayerMap() {
 		const overviewMap = mapsRef.current.overview
 		if (!regionalMap || !overviewMap) return
 
+		setFocusCoord({ longitude: focusCoordinate[0], latitude: focusCoordinate[1] })
+
 		const center = getOffsetCenter(regionalMap, focusCoordinate, SCAN_FOLLOW_SCREEN_OFFSET)
 		const overviewCamera = overviewMap ? getMapCamera(overviewMap) : null
 
@@ -485,6 +488,7 @@ export default function MapboxLayerMap() {
 		const valueX = clamp(((finalPixelX - (scrubberRect.left - mapRect.left)) / scrubberRect.width) * 100, 0, 100)
 		setCoastPositionX(valueX)
 
+		setFocusCoord({ longitude: coord[0], latitude: coord[1] })
 		updateCoastFocusWithCoordinate(coord)
 	}
 
@@ -524,10 +528,8 @@ export default function MapboxLayerMap() {
 				{MAPS.map(mapConfig => (
 					<div key={mapConfig.id} className="map-column">
 						{mapConfig.id === 'overview' && (
-							<>
-								<SearchBar onLocationSelect={handleSearchLocation} />
-								<div
-									ref={coastScrubberRef}
+							<div
+								ref={coastScrubberRef}
 								className="coast-scrubber"
 								role="slider"
 								aria-label="Move along Spain coastline"
@@ -549,7 +551,21 @@ export default function MapboxLayerMap() {
 									/>
 								</div>
 							</div>
-							</>
+						)}
+						{mapConfig.id === 'regional' && (
+							<div
+								className="regional-crosshair"
+								title="Left-click: copy coords · Right-click: go here in 3D"
+								onClick={() => {
+									if (!focusCoord) return
+									const text = `${focusCoord.latitude.toFixed(6)}, ${focusCoord.longitude.toFixed(6)}`
+									navigator.clipboard?.writeText(text).catch(() => {})
+								}}
+								onContextMenu={e => {
+									e.preventDefault()
+									if (focusCoord) setFocus3D(focusCoord)
+								}}
+							/>
 						)}
 						<div
 							ref={element => {
@@ -568,6 +584,7 @@ export default function MapboxLayerMap() {
 
 				<div className="map-column">
 					<GooglePhotorealistic3D focus={focus3D} />
+					<SearchBar onLocationSelect={handleSearchLocation} />
 				</div>
 
 				<aside className="layers-column">
