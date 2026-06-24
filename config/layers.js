@@ -99,7 +99,7 @@ export const mapLayers = {
 		type: 'line',
 		data: '/data/geojson/spain.geojson',
 		paint: {
-			'line-color': '#0015ff',
+			'line-color': '#565d5c',
 			'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.5, 10, 1],
 			'line-opacity': 1,
 		},

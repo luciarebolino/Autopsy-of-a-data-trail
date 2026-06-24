@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import mapboxgl from 'mapbox-gl'
 import { mapBounds, mapLayers, mapStyle, mapView } from '../config/layers'
 import GooglePhotorealistic3D from './GooglePhotorealistic3D'
+import { useSpreadsheetNames, useSpreadsheetTowers } from '../hooks/useSpreadsheetNames'
 
 const MAPS = [
 	{
@@ -62,6 +63,12 @@ export default function MapboxLayerMap() {
 	})
 	const [expandedLayers, setExpandedLayers] = useState({})
 	const layerSignature = JSON.stringify(mapLayers)
+	const extraNames = useSpreadsheetNames()
+	const towers = useSpreadsheetTowers()
+	const [towersVisible, setTowersVisible] = useState(false)
+	const [towersExpanded, setTowersExpanded] = useState(false)
+	const [highlightedTower, setHighlightedTower] = useState(null)
+	const towersMarkersRef = useRef([])
 
 	useEffect(() => {
 		const accessToken = cleanMapboxToken(process.env.NEXT_PUBLIC_MAPBOX_TOKEN)
@@ -518,10 +525,52 @@ export default function MapboxLayerMap() {
 
 	const allLoaded = MAPS.every(map => loadedMaps[map.id])
 
+	// ─── Towers markers ───────────────────────────────────────────────────────
+	useEffect(() => {
+		// Remove any existing markers
+		towersMarkersRef.current.forEach(m => m.remove())
+		towersMarkersRef.current = []
+
+		if (!towersVisible || towers.length === 0) return
+
+		const maps = [mapsRef.current.overview, mapsRef.current.regional].filter(Boolean)
+		if (maps.length === 0) return
+
+		towers.forEach(tower => {
+			maps.forEach(map => {
+				const el = document.createElement('div')
+				el.className = 'tower-marker'
+				el.title = tower.name
+				el.dataset.towerName = tower.name
+				const marker = new mapboxgl.Marker({ element: el })
+					.setLngLat([tower.lng, tower.lat])
+					.setPopup(new mapboxgl.Popup({ offset: 10, closeButton: false })
+						.setHTML(`<span style="font-size:0.85rem">${tower.name}</span>`))
+					.addTo(map)
+				towersMarkersRef.current.push(marker)
+			})
+		})
+	}, [towers, towersVisible, loadedMaps])
+
+	// ─── Highlight a tower on the overview map ────────────────────────────────
+	function highlightTower(tower) {
+		setHighlightedTower(tower.name)
+
+		towersMarkersRef.current.forEach(m => {
+			const el = m.getElement()
+			const isTarget = el.dataset.towerName === tower.name
+			el.classList.toggle('tower-marker--highlighted', isTarget)
+			if (isTarget && !m.getPopup()?.isOpen()) m.togglePopup()
+		})
+	}
+
 	return (
 		<main className="map-page">
 			<header className="map-header">
-				<h1>Autopsy of a Data Trail - LAB 5: The Mechanics of Truth - Julia Nueno & Lucia Rebolino with Bani Brusadin, ...</h1>
+				<h1>
+					Autopsy of a Data Trail - LAB 5: The Mechanics of Truth - Julia Nueno &amp; Lucia Rebolino with Bani Brusadin
+					{extraNames.length > 0 && `, ${extraNames.join(', ')}`}
+				</h1>
 			</header>
 
 			<section className="triptych">
@@ -647,6 +696,50 @@ export default function MapboxLayerMap() {
 										</div>
 									)
 								})}
+
+								{/* Towers (spreadsheet layer) */}
+								<div
+									className={`layer-row${towersVisible ? ' active' : ''}${towersExpanded && towersVisible ? ' expanded' : ''}`}
+									style={{ '--layer-color': '#0015ff' }}
+								>
+									<div className="layer-summary">
+										<button
+											type="button"
+											className="layer-arrow"
+											disabled={!towersVisible}
+											aria-expanded={towersExpanded}
+											onClick={() => setTowersExpanded(v => !v)}
+										>
+											{towersExpanded && towersVisible ? '▼' : '▶'}
+										</button>
+										<button
+											type="button"
+											className="layer-name"
+											aria-pressed={towersVisible}
+											onClick={() => {
+												setTowersVisible(v => !v)
+												if (towersVisible) setTowersExpanded(false)
+											}}
+										>
+											Towers {towers.length > 0 && `(${towers.length})`}
+										</button>
+									</div>
+									{towersExpanded && towersVisible && towers.length > 0 && (
+										<div className="layer-details tower-list">
+											{towers.map(tower => (
+												<button
+													key={tower.name}
+													type="button"
+													className={`tower-list-item${highlightedTower === tower.name ? ' highlighted' : ''}`}
+													onClick={() => highlightTower(tower)}
+												>
+													<span className="tower-list-dot" />
+													{tower.name}
+												</button>
+											))}
+										</div>
+									)}
+								</div>
 							</div>
 
 						</>

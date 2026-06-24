@@ -570,6 +570,75 @@ code {
 	color: #666;
 }
 
+/* Towers spreadsheet markers */
+.tower-marker {
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	background: #0015ff;
+	border: 1.5px solid #fff;
+	box-shadow: 0 0 0 1px #0015ff;
+	cursor: pointer;
+	transition: transform 120ms ease;
+}
+
+.tower-marker:hover {
+	transform: scale(1.6);
+}
+
+.tower-marker--highlighted {
+	background: #fff;
+	border-color: #0015ff;
+	box-shadow: 0 0 0 2px #0015ff;
+	transform: scale(1.8);
+}
+
+/* Tower name list inside layer panel */
+.tower-list {
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+	padding: 0.25rem 0;
+}
+
+.tower-list-item {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	width: 100%;
+	background: none;
+	border: none;
+	padding: 0.3rem 0.75rem 0.3rem 1.5rem;
+	font-size: 0.8rem;
+	color: #fff;
+	cursor: pointer;
+	text-align: left;
+	transition: background 100ms ease;
+}
+
+.tower-list-item:hover {
+	background: rgba(255, 255, 255, 0.1);
+}
+
+.tower-list-item.highlighted {
+	color: #fff;
+	font-weight: 600;
+}
+
+.tower-list-dot {
+	flex-shrink: 0;
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: #fff;
+	border: 1px solid #0015ff;
+}
+
+.tower-list-item.highlighted .tower-list-dot {
+	box-shadow: 0 0 0 2px #fff;
+	background: #0015ff;
+}
+
 /* Regional map crosshair */
 .regional-crosshair {
 	position: absolute;
