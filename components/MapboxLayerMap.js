@@ -556,13 +556,27 @@ export default function MapboxLayerMap() {
 	function highlightTower(tower) {
 		setHighlightedTower(tower.name)
 
+		// Apply visual highlight to markers
+		requestAnimationFrame(() => {
+			towersMarkersRef.current.forEach(m => {
+				const el = m.getElement()
+				const isTarget = el.dataset.towerName === tower.name
+				el.classList.toggle('tower-marker--highlighted', isTarget)
+				if (isTarget && !m.getPopup()?.isOpen()) m.togglePopup()
+			})
+		})
+
+		setFocus3D({ longitude: tower.lng, latitude: tower.lat })
+	}
+
+	// Re-apply highlight when markers are recreated
+	useEffect(() => {
+		if (!highlightedTower || towersMarkersRef.current.length === 0) return
 		towersMarkersRef.current.forEach(m => {
 			const el = m.getElement()
-			const isTarget = el.dataset.towerName === tower.name
-			el.classList.toggle('tower-marker--highlighted', isTarget)
-			if (isTarget && !m.getPopup()?.isOpen()) m.togglePopup()
+			el.classList.toggle('tower-marker--highlighted', el.dataset.towerName === highlightedTower)
 		})
-	}
+	}, [towers, towersVisible, loadedMaps, highlightedTower])
 
 	return (
 		<main className="map-page">

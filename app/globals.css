@@ -536,6 +536,40 @@ code {
 	background: #f0f0f0;
 }
 
+/* Street View panorama alternatives */
+.sv-pano-toggle {
+	position: absolute;
+	bottom: 1.2rem;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 10;
+	display: flex;
+	gap: 0.35rem;
+}
+
+.sv-pano-toggle button {
+	width: 1.8rem;
+	height: 1.8rem;
+	border: 1px solid rgba(255, 255, 255, 0.5);
+	border-radius: 50%;
+	background: rgba(0, 0, 0, 0.45);
+	color: #fff;
+	font-size: 0.75rem;
+	font-weight: 600;
+	cursor: pointer;
+	padding: 0;
+	transition: background 120ms ease;
+}
+
+.sv-pano-toggle button.active {
+	background: #0015ff;
+	border-color: #0015ff;
+}
+
+.sv-pano-toggle button:not(.active):hover {
+	background: rgba(255, 255, 255, 0.25);
+}
+
 .search-bar-container {
 	position: absolute;
 	top: calc(var(--header-height) + 0.75rem + 2.4rem + 0.5rem);

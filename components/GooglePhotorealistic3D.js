@@ -33,36 +33,25 @@ export default function GooglePhotorealistic3D({ focus }) {
 			const Cesium = window.Cesium
 			const viewer = viewerRef.current
 
-			if (elevationServiceRef.current) {
-				elevationServiceRef.current.getElevationForLocations(
-					{ locations: [{ lat: focus.latitude, lng: focus.longitude }] },
-					(results, status) => {
-						let targetHeight = INITIAL_VIEW.height
-						if (status === 'OK' && results[0]) {
-							targetHeight = results[0].elevation + 150 // 150m above ground
-						}
+			const doFly = (groundElevation) => {
+				const camHeight = groundElevation + INITIAL_VIEW.height
+				// Calculate horizontal offset so camera sits behind the target
+				// at the same relative position as the initial view
+				const pitchRad = Math.abs(INITIAL_VIEW.pitch) * (Math.PI / 180)
+				const headingRad = INITIAL_VIEW.heading * (Math.PI / 180)
+				const horizontalDist = INITIAL_VIEW.height / Math.tan(pitchRad) // ~181m
+				// Offset camera in the opposite direction of heading
+				const offsetBearing = headingRad + Math.PI // 180° from heading
+				const metersPerDegreeLat = 111320
+				const metersPerDegreeLng = 111320 * Math.cos(focus.latitude * Math.PI / 180)
+				const dLat = (horizontalDist * Math.cos(offsetBearing)) / metersPerDegreeLat
+				const dLng = (horizontalDist * Math.sin(offsetBearing)) / metersPerDegreeLng
 
-						viewer.camera.flyTo({
-							destination: Cesium.Cartesian3.fromDegrees(
-								focus.longitude,
-								focus.latitude,
-								targetHeight
-							),
-							orientation: {
-								heading: Cesium.Math.toRadians(INITIAL_VIEW.heading),
-								pitch: Cesium.Math.toRadians(INITIAL_VIEW.pitch),
-								roll: Cesium.Math.toRadians(INITIAL_VIEW.roll),
-							},
-							duration: 1.5,
-						})
-					}
-				)
-			} else {
 				viewer.camera.flyTo({
 					destination: Cesium.Cartesian3.fromDegrees(
-						focus.longitude,
-						focus.latitude,
-						INITIAL_VIEW.height + 200 // Fallback safe offset
+						focus.longitude + dLng,
+						focus.latitude + dLat,
+						camHeight
 					),
 					orientation: {
 						heading: Cesium.Math.toRadians(INITIAL_VIEW.heading),
@@ -71,6 +60,18 @@ export default function GooglePhotorealistic3D({ focus }) {
 					},
 					duration: 1.5,
 				})
+			}
+
+			if (elevationServiceRef.current) {
+				elevationServiceRef.current.getElevationForLocations(
+					{ locations: [{ lat: focus.latitude, lng: focus.longitude }] },
+					(results, status) => {
+						const groundElev = (status === 'OK' && results[0]) ? results[0].elevation : 0
+						doFly(groundElev)
+					}
+				)
+			} else {
+				doFly(0)
 			}
 		} else if (viewMode === 'streetview' && panoramaRef.current && window.google) {
 			const svService = new window.google.maps.StreetViewService()

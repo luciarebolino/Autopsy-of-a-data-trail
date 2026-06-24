@@ -5,8 +5,8 @@ import { useEffect, useState } from 'react'
 const SHEET_ID = '1H5pFVnqCyDwAIBsxODIO0yMXnPoljnqGcYqbujsAnvI'
 
 export const SHEET_GIDS = {
-	names:   '346008252',
-	towers:  '1572157430',
+	names: '346008252',
+	towers: '1572157430',
 }
 
 /** Fetch any tab as CSV rows (array of string arrays). */
@@ -58,8 +58,8 @@ export function useSpreadsheetTowers() {
 	// Skip header row (index 0)
 	return rows.slice(1).map(r => ({
 		name: r[1] ?? '',
-		lat:  parseFloat(r[2]),
-		lng:  parseFloat(r[3]),
+		lat: parseFloat(r[2]),
+		lng: parseFloat(r[3]),
 	})).filter(t => isFinite(t.lat) && isFinite(t.lng))
 }
 
