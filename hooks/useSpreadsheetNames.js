@@ -7,6 +7,7 @@ const SHEET_ID = '1H5pFVnqCyDwAIBsxODIO0yMXnPoljnqGcYqbujsAnvI'
 export const SHEET_GIDS = {
 	names: '346008252',
 	towers: '1572157430',
+	timeline: '99596270',
 }
 
 /** Fetch any tab as CSV rows (array of string arrays). */
@@ -61,6 +62,32 @@ export function useSpreadsheetTowers() {
 		lat: parseFloat(r[2]),
 		lng: parseFloat(r[3]),
 	})).filter(t => isFinite(t.lat) && isFinite(t.lng))
+}
+
+/**
+ * Returns timeline entries from the "timeline" tab as
+ * [{ year, geography, policy, technology }, ...]
+ * Col A = year, B = geography, C = policy, D = technology
+ */
+export function useSpreadsheetTimeline() {
+	const rows = useSheetRows(SHEET_GIDS.timeline)
+
+	if (!rows || rows.length < 2) return []
+	// Skip header row (index 0)
+	return rows.slice(1)
+		.map(r => ({
+			year: (r[0] ?? '').trim(),
+			geography: (r[1] ?? '').trim(),
+			policy: (r[2] ?? '').trim(),
+			technology: (r[3] ?? '').trim(),
+		}))
+		.filter(e => e.year)
+		.sort((a, b) => {
+			const ya = parseInt(a.year, 10)
+			const yb = parseInt(b.year, 10)
+			if (isNaN(ya) || isNaN(yb)) return 0
+			return ya - yb
+		})
 }
 
 /** Minimal CSV parser that handles quoted fields. */

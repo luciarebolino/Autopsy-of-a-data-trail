@@ -5,6 +5,7 @@ import mapboxgl from 'mapbox-gl'
 import { mapBounds, mapLayers, mapStyle, mapView } from '../config/layers'
 import GooglePhotorealistic3D from './GooglePhotorealistic3D'
 import { useSpreadsheetNames, useSpreadsheetTowers } from '../hooks/useSpreadsheetNames'
+import TimelinePanel from './TimelinePanel'
 
 const MAPS = [
 	{
@@ -581,11 +582,17 @@ export default function MapboxLayerMap() {
 	return (
 		<main className="map-page">
 			<header className="map-header">
-				<h1>
-					Autopsy of a Data Trail - LAB 5: The Mechanics of Truth - Julia Nueno &amp; Lucia Rebolino with Bani Brusadin
-					{extraNames.length > 0 && `, ${extraNames.join(', ')}`}
-				</h1>
-			</header>
+			<div className="marquee">
+				{[0, 1].map(i => {
+					const text = `Autopsy of a Data Trail — LAB 5: The Mechanics of Truth — Julia Nueno — Lucia Rebolino — Bani Brusadin${extraNames.length > 0 ? ` — ${extraNames.join(' — ')}` : ''}`
+					return (
+						<span key={i} className="marquee-content" aria-hidden={i === 1}>
+							{text}
+						</span>
+					)
+				})}
+			</div>
+		</header>
 
 			<section className="triptych">
 				{MAPS.map(mapConfig => (
@@ -661,10 +668,10 @@ export default function MapboxLayerMap() {
 						</button>
 						<button
 							type="button"
-							className={activePanel === 'arena' ? 'active' : ''}
-							onClick={() => setActivePanel('arena')}
+							className={activePanel === 'timeline' ? 'active' : ''}
+							onClick={() => setActivePanel('timeline')}
 						>
-							<img src="/data/geojson/arena.png" alt="Are.na" />
+							Timeline
 						</button>
 					</div>
 
@@ -758,9 +765,7 @@ export default function MapboxLayerMap() {
 
 						</>
 					) : (
-						<div className="arena-panel">
-							<p>Space for Are.na channel content.</p>
-						</div>
+						<TimelinePanel />
 					)}
 				</aside>
 			</section>

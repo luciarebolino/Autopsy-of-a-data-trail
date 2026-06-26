@@ -57,15 +57,29 @@ code {
 	padding: 0.28rem 0.45rem;
 }
 
-.map-header h1 {
-	margin: 0.2rem;
-	border: 0;
-	padding: 0;
+.marquee {
+	display: flex;
+	overflow: hidden;
+	width: 100%;
+	height: 100%;
+	align-items: center;
+}
+
+.marquee-content {
+	flex-shrink: 0;
+	white-space: nowrap;
+	padding-right: 4rem;
 	color: #111;
 	font-size: 1rem;
 	font-family: Arial, Helvetica, sans-serif;
 	font-weight: 400;
 	line-height: 1;
+	animation: marquee-scroll 30s linear infinite;
+}
+
+@keyframes marquee-scroll {
+	0%   { transform: translateX(0); }
+	100% { transform: translateX(-100%); }
 }
 
 .layers-column {
@@ -277,18 +291,161 @@ code {
 	white-space: pre-wrap;
 }
 
-.arena-panel {
-	display: grid;
-	gap: 0.35rem;
-	padding: 0.45rem;
-	border-bottom: 1px dotted #111;
-	color: #111;
-	font-size: 0.75rem;
-	line-height: 1.35;
+/* ─── Timeline panel ─────────────────────────────────────────────────── */
+.timeline-panel {
+	display: flex;
+	flex-direction: column;
+	height: calc(100dvh - var(--header-height));
+	overflow: hidden;
+	font-family: Arial, Helvetica, sans-serif;
 }
 
-.arena-panel p {
+.timeline-loading {
 	margin: 0;
+	padding: 1rem;
+	color: var(--muted);
+	font-size: 0.85rem;
+}
+
+/* Column headers — sticky at top */
+.timeline-col-headers {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 0;
+	padding: 0 0 0 2.4rem;
+	border-bottom: 1px solid #111;
+	background: #fff;
+	flex-shrink: 0;
+}
+
+.timeline-col-header {
+	padding: 0.35rem 0.4rem;
+	font-size: 0.78rem;
+	font-weight: 600;
+	color: var(--cat-color, #111);
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	border-right: 1px dotted #ccc;
+}
+
+.timeline-col-header:last-child {
+	border-right: 0;
+}
+
+/* Scrollable body */
+.timeline-body {
+	flex: 1;
+	overflow-y: auto;
+	overflow-x: hidden;
+	position: relative;
+}
+
+/* Each row = year label + 3 cells */
+.timeline-row {
+	display: grid;
+	grid-template-columns: 2.4rem 1fr;
+	min-height: 2.2rem;
+	position: relative;
+}
+
+/* Vertical spine line */
+.timeline-row::before {
+	content: "";
+	position: absolute;
+	left: 2.15rem;
+	top: 0;
+	bottom: 0;
+	width: 1px;
+	background: #ccc;
+	z-index: 0;
+}
+
+.timeline-row:first-child::before {
+	top: 50%;
+}
+
+.timeline-row:last-child::before {
+	bottom: 50%;
+}
+
+/* Year label */
+.timeline-year {
+	position: relative;
+	display: flex;
+	align-items: flex-start;
+	justify-content: flex-end;
+	padding: 0.45rem 0.3rem 0.45rem 0.2rem;
+	z-index: 1;
+}
+
+.timeline-year-text {
+	font-size: 0.68rem;
+	font-weight: 600;
+	color: #111;
+	line-height: 1;
+	letter-spacing: 0.02em;
+}
+
+.timeline-year-dot {
+	position: absolute;
+	right: -0.22rem;
+	top: 0.45rem;
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: #111;
+	border: 1.5px solid #fff;
+	box-shadow: 0 0 0 1px #111;
+	z-index: 2;
+}
+
+/* Three-column cells grid */
+.timeline-cells {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 0;
+	border-bottom: 1px dotted #e0e0e0;
+}
+
+/* Individual cell */
+.timeline-cell {
+	position: relative;
+	padding: 0.3rem 0.35rem;
+	border-right: 1px dotted #e8e8e8;
+	min-height: 1.8rem;
+}
+
+.timeline-cell:last-child {
+	border-right: 0;
+}
+
+/* Card inside a cell */
+.timeline-card {
+	position: relative;
+	padding: 0.3rem 0.35rem;
+	border-left: 2px solid var(--cat-color, #111);
+	background: #f8f8f8;
+	font-size: 0.72rem;
+	line-height: 1.35;
+	color: #222;
+	transition: background 150ms ease, transform 150ms ease;
+}
+
+.timeline-card:hover {
+	background: #f0f0f0;
+	transform: translateX(1px);
+}
+
+/* Subtle pulse on the dot for the current hovered row */
+.timeline-row:hover .timeline-year-dot {
+	background: #0015ff;
+	box-shadow: 0 0 0 1px #0015ff, 0 0 0 3px rgba(0, 21, 255, 0.15);
+	transition: all 150ms ease;
+}
+
+.timeline-row:hover .timeline-year-text {
+	color: #0015ff;
+	transition: color 150ms ease;
 }
 
 .panel-note {
