@@ -175,7 +175,7 @@ code {
 	right: 0.35rem;
 	top: 0.35rem;
 	bottom: 0.45rem;
-	border-radius: 50%;
+	border-radius: 999px;
 	background: var(--layer-color);
 }
 
@@ -789,7 +789,8 @@ code {
 	display: flex;
 	flex-direction: column;
 	gap: 0;
-	padding: 0.25rem 0;
+	padding: 0.6rem 0;
+	align-items: center;
 }
 
 .tower-list-item {
@@ -799,7 +800,7 @@ code {
 	width: 100%;
 	background: none;
 	border: none;
-	padding: 0.3rem 0.75rem 0.3rem 1.5rem;
+	padding: 0.3rem 1.2rem;
 	font-size: 0.8rem;
 	color: #fff;
 	cursor: pointer;
@@ -828,6 +829,19 @@ code {
 .tower-list-item.highlighted .tower-list-dot {
 	box-shadow: 0 0 0 2px #fff;
 	background: #0015ff;
+}
+
+.tower-list-source-arrow {
+	flex-shrink: 0;
+	font-size: 0.72rem;
+	line-height: 1;
+	color: rgba(255, 255, 255, 0.6);
+	text-decoration: none;
+	transition: color 120ms ease;
+}
+
+.tower-list-source-arrow:hover {
+	color: #fff;
 }
 
 /* Regional map crosshair */

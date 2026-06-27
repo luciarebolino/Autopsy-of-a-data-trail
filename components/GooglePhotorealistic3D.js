@@ -20,6 +20,8 @@ export default function GooglePhotorealistic3D({ focus }) {
 	const viewerRef = useRef(null)
 	const panoramaRef = useRef(null)
 	const elevationServiceRef = useRef(null)
+	const svServiceRef = useRef(null)
+	const svDebounceRef = useRef(null)
 	
 	const [error, setError] = useState('')
 	const [viewMode, setViewMode] = useState('3d') // '3d' or 'streetview'
@@ -74,22 +76,34 @@ export default function GooglePhotorealistic3D({ focus }) {
 				doFly(0)
 			}
 		} else if (viewMode === 'streetview' && panoramaRef.current && window.google) {
-			const svService = new window.google.maps.StreetViewService()
-			const location = { lat: focus.latitude, lng: focus.longitude }
-			
-			svService.getPanorama(
-				{ 
-					location, 
-					radius: 2000,
-					preference: window.google.maps.StreetViewPreference.NEAREST 
-				}, 
-				(data, status) => {
-				if (status === 'OK' && data.location) {
-					panoramaRef.current.setPano(data.location.pano)
-				} else {
-					panoramaRef.current.setPosition(location)
+			// Debounce Street View lookups to avoid 429 rate-limit errors
+			if (svDebounceRef.current) clearTimeout(svDebounceRef.current)
+			svDebounceRef.current = setTimeout(() => {
+				if (!svServiceRef.current) {
+					svServiceRef.current = new window.google.maps.StreetViewService()
 				}
-			})
+				const location = { lat: focus.latitude, lng: focus.longitude }
+				const attempt = (retries) => {
+					svServiceRef.current.getPanorama(
+						{
+							location,
+							radius: 2000,
+							preference: window.google.maps.StreetViewPreference.NEAREST
+						},
+						(data, status) => {
+							if (status === 'OK' && data.location) {
+								panoramaRef.current.setPano(data.location.pano)
+							} else if (retries > 0) {
+								// Retry with back-off on failure (covers 429 / UNKNOWN_ERROR)
+								setTimeout(() => attempt(retries - 1), 1500)
+							} else {
+								panoramaRef.current.setPosition(location)
+							}
+						}
+					)
+				}
+				attempt(2)
+			}, 600)
 		}
 	}, [focus, viewMode])
 

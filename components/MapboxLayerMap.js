@@ -755,6 +755,18 @@ export default function MapboxLayerMap() {
 													onClick={() => highlightTower(tower)}
 												>
 													<span className="tower-list-dot" />
+													{tower.sourceUrl && (
+														<a
+															className="tower-list-source-arrow"
+															href={tower.sourceUrl}
+															target="_blank"
+															rel="noopener noreferrer"
+															onClick={e => e.stopPropagation()}
+															title="Open source"
+														>
+															↗
+														</a>
+													)}
 													{tower.name}
 												</button>
 											))}

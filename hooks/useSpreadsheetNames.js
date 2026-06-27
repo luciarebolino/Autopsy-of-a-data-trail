@@ -49,8 +49,9 @@ export function useSpreadsheetNames() {
 }
 
 /**
- * Returns towers from the "towers" tab as [{name, lat, lng}, ...]
- * Assumes: col A = name, col C = lat, col D = lng (0-indexed: 0, 2, 3)
+ * Returns towers from the "towers" tab as [{name, lat, lng, screenshotUrl, sourceUrl}, ...]
+ * Assumes: col B = name, col C = lat, col D = lng, col G = screenshot URL, col I = source URL
+ * (0-indexed: 1, 2, 3, 6, 8)
  */
 export function useSpreadsheetTowers() {
 	const rows = useSheetRows(SHEET_GIDS.towers)
@@ -61,6 +62,8 @@ export function useSpreadsheetTowers() {
 		name: r[1] ?? '',
 		lat: parseFloat(r[2]),
 		lng: parseFloat(r[3]),
+		screenshotUrl: (r[6] ?? '').trim(),
+		sourceUrl: (r[8] ?? '').trim(),
 	})).filter(t => isFinite(t.lat) && isFinite(t.lng))
 }
 
