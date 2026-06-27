@@ -12,8 +12,8 @@ const MAPS = [
 		id: 'overview',
 		linked: true,
 		initialView: {
-			center: [-6.380997, 35.672468],
-			zoom: 4.731,
+			center: [-5.5, 37.5],
+			zoom: 4.2,
 			bearing: 72,
 			pitch: 0,
 		},
@@ -113,6 +113,14 @@ export default function MapboxLayerMap() {
 				preserveDrawingBuffer: true,
 				attributionControl: false,
 			})
+
+			// Lock the overview map — no zoom allowed
+			if (mapConfig.id === 'overview') {
+				map.scrollZoom.disable()
+				map.doubleClickZoom.disable()
+				map.touchZoomRotate.disable()
+				map.boxZoom.disable()
+			}
 
 			mapsRef.current[mapConfig.id] = map
 			baseMapsRef.current[mapConfig.id] = baseMap
@@ -720,7 +728,7 @@ export default function MapboxLayerMap() {
 
 								{/* Towers (spreadsheet layer) */}
 								<div
-									className={`layer-row${towersVisible ? ' active' : ''}${towersExpanded && towersVisible ? ' expanded' : ''}`}
+									className={`layer-row tower-layer${towersVisible ? ' active' : ''}${towersExpanded && towersVisible ? ' expanded' : ''}`}
 									style={{ '--layer-color': '#0015ff' }}
 								>
 									<div className="layer-summary">

@@ -69,8 +69,8 @@ export function useSpreadsheetTowers() {
 
 /**
  * Returns timeline entries from the "timeline" tab as
- * [{ year, geography, policy, technology }, ...]
- * Col A = year, B = geography, C = policy, D = technology
+ * [{ year, geography, policy, technology, documentacion, interpelacion }, ...]
+ * Col A = year, B = geography, C = policy, D = technology, E = documentación, F = interpelación
  */
 export function useSpreadsheetTimeline() {
 	const rows = useSheetRows(SHEET_GIDS.timeline)
@@ -83,6 +83,8 @@ export function useSpreadsheetTimeline() {
 			geography: (r[1] ?? '').trim(),
 			policy: (r[2] ?? '').trim(),
 			technology: (r[3] ?? '').trim(),
+			documentacion: (r[4] ?? '').trim(),
+			interpelacion: (r[5] ?? '').trim(),
 		}))
 		.filter(e => e.year)
 		.sort((a, b) => {
